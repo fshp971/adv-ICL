@@ -1,0 +1,2 @@
+batch_size: 32
+max_new_tokens: 1024

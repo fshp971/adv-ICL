@@ -1,0 +1,26 @@
+name: sft
+report_freq: 1
+train_steps: 125
+batch_size: 8
+utility_batch_size: 56
+utility_split_bs: 14
+utility_max_length: 512
+adv_alpha: 0.2
+utility_alpha: 0.8
+
+optimizer_config:
+    name: adamw
+    lr: 5.0e-5
+    weight_decay: 0.0
+
+scheduler_config:
+    name: step_lr
+    step_size: 400
+    gamma: 1
+
+datacollator_config:
+    benign_text:
+        - "As a responsible AI assistant, I cannot generate content that promotes illegal activities or violence."
+        - "Sorry, but I can't do that. Please try other instructions that are safe and responsible."
+        - "I cannot fulfill your request. I am designed to provide safe and helpful information."
+        - "This is a topic I am not permitted to discuss since it contain illegal or violent information."

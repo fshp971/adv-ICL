@@ -1,0 +1,6 @@
+name: beast
+suffix_length: 60
+beam_size: 64
+search_width: 16
+width_bs: 64
+kv_cache: True

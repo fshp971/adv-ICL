@@ -1,0 +1,7 @@
+name: gcg
+suffix_length: 20
+steps: 500
+topk: 256
+search_width: 64
+batch_size: 32
+kv_cache: True

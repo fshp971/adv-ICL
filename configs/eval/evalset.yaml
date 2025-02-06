@@ -1,0 +1,3 @@
+batch_size: 10
+per_response_num: 10
+max_new_tokens: 512
