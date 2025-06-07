@@ -1,6 +1,11 @@
-# "Short-length" Adversarial Training Helps LLMs Defend "Long-length" Jailbreak Attacks: Theoretical and Empirical Evidence
+# Short-length Adversarial Training Helps LLMs Defend Long-length Jailbreak Attacks: Theoretical and Empirical Evidence
 
-This is the official repository for the preprint ["Short-length Adversarial Training Helps LLMs Defend Long-length Jailbreak Attacks: Theoretical and Empirical Evidence"](https://arxiv.org/abs/2502.04204) by Shaopeng Fu, Liang Ding, and Di Wang.
+This is the official repository for the preprint [**"Short-length Adversarial Training Helps LLMs Defend Long-length Jailbreak Attacks: Theoretical and Empirical Evidence"**](https://arxiv.org/abs/2502.04204) by Shaopeng Fu, Liang Ding, Jingfeng Zhang, and Di Wang.
+
+## News
+
+- 06/2025: An update version of the paper will be released on [arXiv](https://arxiv.org/abs/2502.04204v2).
+- 02/2025: The paper was released on [arXiv](https://arxiv.org/abs/2502.04204v1).
 
 ## Installation
 
@@ -48,9 +53,9 @@ Please see the [scripts/README.md](./scripts/README.md) for the tutorial of how 
 
 ```
 @article{fu2025short,
-  title={"Short-length" Adversarial Training Helps LLMs Defend "Long-length" Jailbreak Attacks: Theoretical and Empirical Evidence},
-  author={Shaopeng Fu and Liang Ding and Di Wang},
-  journal={arXiv preprint arXiv:2502.04204},
+  title={Short-length Adversarial Training Helps LLMs Defend Long-length Jailbreak Attacks: Theoretical and Empirical Evidence},
+  author={Shaopeng Fu and Liang Ding, Jingfeng Zhang and Di Wang},
+  journal={arXiv preprint arXiv:2502.04204v2},
   year={2025}
 }
 ```

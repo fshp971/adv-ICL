@@ -59,9 +59,17 @@ class ExpandablePrefixCache(PrefixCache):
     def __init__(self, max_length: int):
         super().__init__(max_length)
         self.expand_num = None
+        self.clip_num = None
+        self.pseudo_cache_len = None
 
     def set_expand(self, expand_num: int = None):
         self.expand_num = expand_num
+
+    def set_clip(self, clip_num: int = None):
+        self.clip_num = clip_num
+
+    def set_pseudo_cache_len(self, pseudo_cache_len: int = None):
+        self.pseudo_cache_len = pseudo_cache_len
 
     def update(
         self,
@@ -76,6 +84,10 @@ class ExpandablePrefixCache(PrefixCache):
         key_cache = self.key_cache[layer_idx]
         value_cache = self.value_cache[layer_idx]
 
+        if self.pseudo_cache_len is not None:
+            key_cache = key_cache[:, :, : self.pseudo_cache_len, :]
+            value_cache = value_cache[:, :, : self.pseudo_cache_len, :]
+
         if self.expand_num is not None:
             newB = self.expand_num * key_cache.shape[0]
             assert newB == key_states.shape[0]
@@ -88,6 +100,10 @@ class ExpandablePrefixCache(PrefixCache):
 
         key_states = torch.cat([key_cache, key_states], dim=-2)
         value_states = torch.cat([value_cache, value_states], dim=-2)
+
+        if (self.clip_num is not None) and (self.expand_num is None):
+            self.key_cache[layer_idx] = key_states[:, :, : self.clip_num, :]
+            self.value_cache[layer_idx] = value_states[:, :, : self.clip_num, :]
 
         return key_states, value_states
 

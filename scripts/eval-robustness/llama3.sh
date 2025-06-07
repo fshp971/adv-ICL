@@ -28,7 +28,7 @@ elif [[ -z $k ]]; then
 elif [[ -z $dataset ]] || [[ $dataset != "harmbench-test50" ]] && [[ $dataset != "advbench-first50" ]]; then
     echo "Error: --dataset is required and should be either 'harmbench-test50' or 'advbench-first50'"
     exit 1
-elif [[ -z $attack ]] || [[ $attack != "gcg" ]] && [[ $attack != "beast" ]]; then
+elif [[ -z $attack ]] || [[ $attack != "gcg" ]] && [[ $attack != "beast" ]] && [[ $attack != "autodan-zhu" ]]; then
     echo "Error: --attack is required and should be either 'gcg' or 'beast'"
     exit 1
 fi

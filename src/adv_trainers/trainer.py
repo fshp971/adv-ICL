@@ -122,7 +122,7 @@ class AdvTrainerBase:
 
             advsfx_ids = None
             if self.attacker is not None:
-                advsfx_ids = self.attacker.attack_embeds(
+                temp = self.attacker.attack_embeds(
                     model        = self.model,
                     tokenizer    = self.tokenizer,
                     message_ids  = inputs["prompt_ids"],
@@ -131,13 +131,25 @@ class AdvTrainerBase:
                     target_mask  = inputs["harmful_mask"],
                     device       = self.device,
                 )
+                if temp is None:
+                    advsfx_ids = None
+                    advsfx_embeds = None
+                elif len(temp.shape) == 2:
+                    advsfx_ids = temp
+                    advsfx_embeds = None
+                elif len(temp.shape) == 3:
+                    advsfx_ids = None
+                    advsfx_embeds = temp
+                else:
+                    raise RuntimeError
+                advsfx_inputs = {"ids": advsfx_ids, "embeds": advsfx_embeds}
 
             utility_inputs = None
             if self.utilityset is not None:
                 utility_inputs = next(self.utilityloader)
                 utility_inputs = {k : v.to(self.device) for k, v in utility_inputs.items()}
 
-            losses = self._train_one_epoch(inputs, advsfx_ids, utility_inputs)
+            losses = self._train_one_epoch(inputs, advsfx_inputs, utility_inputs)
 
             if (self.logger is not None) and ((self.current_step) % self.report_freq == 0):
                 self.logger.info(f"Step: [{self.current_step}/{self.train_steps}]")
@@ -145,7 +157,7 @@ class AdvTrainerBase:
                     self.logger.info("{}: {:.6f}".format(k, v))
                     # self.logger.info("training loss: {:.6f}".format(loss))
 
-    def _train_one_epoch(self, inputs: torch.Tensor, advsfx_ids: torch.Tensor = None, utility_inputs: dict = None) -> dict:
+    def _train_one_epoch(self, inputs: torch.Tensor, advsfx_inputs: dict, utility_inputs: dict = None) -> dict:
         raise NotImplementedError(f"Please implement _compute_loss_and_backward() method for {self.__class__}")
 
     def state_dict(self) -> Dict[str, Any]:
@@ -171,22 +183,39 @@ class AdvTrainerBase:
 
 
 class AdvTrainerSFT(AdvTrainerBase):
-    def _train_one_epoch(self, inputs: dict, advsfx_ids: torch.Tensor = None, utility_inputs: dict = None) -> dict:
+    def _train_one_epoch(self, inputs: dict, advsfx_inputs: dict, utility_inputs: dict = None) -> dict:
         self.model.train()
         self.optimizer.zero_grad()
+
+        advsfx_ids = advsfx_inputs["ids"]
+        advsfx_embeds = advsfx_inputs["embeds"]
 
         if advsfx_ids is not None:
             input_ids = torch.cat([inputs["prompt_ids"], advsfx_ids, inputs["benign_ids"]], dim=1)
             input_mask = torch.cat([inputs["prompt_mask"], torch.ones_like(advsfx_ids), torch.ones_like(inputs["benign_ids"])], dim=1)
+            input_embeds = self.model.get_input_embeddings()(input_ids)
+        elif advsfx_embeds is not None:
+            input_embeds = torch.cat([
+                self.model.get_input_embeddings()(inputs["prompt_ids"]),
+                advsfx_embeds,
+                self.model.get_input_embeddings()(inputs["benign_ids"]),
+            ], dim=1)
+            input_mask = torch.cat([
+                inputs["prompt_mask"],
+                torch.ones(advsfx_embeds.shape[:2], dtype=torch.int64, device=advsfx_embeds.device),
+                torch.ones_like(inputs["benign_ids"])
+            ], dim=1)
         else:
             input_ids = torch.cat([inputs["prompt_ids"], inputs["benign_ids"]], dim=1)
             input_mask = torch.cat([inputs["prompt_mask"], torch.ones_like(inputs["benign_ids"])], dim=1)
+            input_embeds = self.model.get_input_embeddings()(input_ids)
 
         target_ids = inputs["benign_ids"]
         target_mask = inputs["benign_mask"]
         tar_len = target_mask.shape[-1]
 
-        logits = self.model(input_ids=input_ids, attention_mask=input_mask).logits
+        # logits = self.model(input_ids=input_ids, attention_mask=input_mask).logits
+        logits = self.model(inputs_embeds=input_embeds, attention_mask=input_mask).logits
         logits = logits[:, -(tar_len+1) : -1]
         logps = logits.log_softmax(dim=-1)
         logps = torch.gather(logps, dim=-1, index=target_ids.unsqueeze(-1)).squeeze(-1)

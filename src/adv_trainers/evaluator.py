@@ -119,7 +119,7 @@ def build_evalset(
 
         advsfx_ids = None
         if attacker is not None:
-            advsfx_ids = attacker.attack_embeds(
+            temp = attacker.attack_embeds(
                 model        = model,
                 tokenizer    = tokenizer,
                 message_ids  = inputs["prompt_ids"],
@@ -128,6 +128,17 @@ def build_evalset(
                 target_mask  = inputs["harmful_mask"],
                 device       = device,
             )
+            if temp is None:
+                advsfx_ids = None
+                advsfx_embeds = None
+            elif len(temp.shape) == 2:
+                advsfx_ids = temp
+                advsfx_embeds = None
+            elif len(temp.shape) == 3:
+                advsfx_ids = None
+                advsfx_embeds = temp
+            else:
+                raise RuntimeError
 
         inputs_ids = inputs["prompt_ids"]
         inputs_mask = inputs["prompt_mask"]
@@ -138,23 +149,41 @@ def build_evalset(
 
         if advsfx_ids is not None:
             inputs_ids = torch.cat([inputs_ids, advsfx_ids, target_ids], dim=1)
+            inputs_embeds = model.get_input_embeddings()(inputs_ids)
             inputs_mask = torch.cat([inputs_mask, torch.ones_like(advsfx_ids), torch.ones_like(target_ids)], dim=1)
+        elif advsfx_embeds is not None:
+            inputs_embeds = torch.cat([
+                model.get_input_embeddings()(inputs_ids),
+                advsfx_embeds,
+                model.get_input_embeddings()(target_ids),
+            ], dim=1)
+            inputs_mask = torch.cat([
+                inputs_mask,
+                torch.ones(inputs_embeds.shape[:2], dtype=torch.int64, device=device),
+                torch.ones_like(target_ids),
+            ], dim=1)
         else:
             inputs_ids = torch.cat([inputs_ids, target_ids], dim=1)
+            inputs_embeds = model.get_input_embeddings()(inputs_ids)
             inputs_mask = torch.cat([inputs_mask, torch.ones_like(target_ids)], dim=1)
 
         outputs_text_list = []
         for k in range(eval_config.per_response_num):
             outputs_ids = model.generate(
-                inputs=inputs_ids,
+                # inputs=inputs_ids,
+                inputs_embeds=inputs_embeds,
                 attention_mask=inputs_mask,
                 do_sample=True,
                 max_new_tokens=eval_config.max_new_tokens,
-            ) # shape: [B, L + max_new_tokens]
+            ) # shape: [B, max_new_tokens]
             outputs_text = tokenizer.batch_decode(outputs_ids, skip_special_tokens=True)
             outputs_text_list.append(outputs_text)
 
-        inputs_text = tokenizer.batch_decode(inputs_ids, skip_special_tokens=True)
+        if inputs_ids is None:
+            inputs_text = None
+        else:
+            inputs_text = tokenizer.batch_decode(inputs_ids, skip_special_tokens=True)
+
         prompt_text = tokenizer.batch_decode(inputs["raw_prompt_ids"], skip_special_tokens=True)
         target_text = tokenizer.batch_decode(inputs["raw_harmful_ids"], skip_special_tokens=True)
 
@@ -165,7 +194,8 @@ def build_evalset(
                     "prompt" :prompt_text[b],
                     "target" :target_text[b],
                     "adv_input": inputs_text[b],
-                    "generation": outputs_text_list[k][b][len(inputs_text[b]) : ],
+                    # "generation": outputs_text_list[k][b][len(inputs_text[b]) : ],
+                    "generation": outputs_text_list[k][b],
                 })
 
     return evalset
